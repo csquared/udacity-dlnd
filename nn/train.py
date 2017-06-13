@@ -12,8 +12,8 @@ def sigmoid(x):
 
 # Hyperparameters
 n_hidden = 2  # number of hidden units
-epochs = 500
-learnrate = 0.006
+epochs = 900
+learnrate = 0.005
 
 n_records, n_features = features.shape
 last_loss = None
@@ -48,12 +48,12 @@ for e in range(epochs):
         hidden_error_term = weights_hidden_output * output_error_term * h_prime
 
         # TODO: Update the change in weights
-        del_w_hidden_output += learnrate * output_error_term * hidden_output
-        del_w_input_hidden += learnrate * hidden_error_term * x[:,None]
+        del_w_hidden_output += output_error_term * hidden_output
+        del_w_input_hidden += hidden_error_term * x[:,None]
 
     # TODO: Update weights
-    weights_input_hidden += del_w_input_hidden
-    weights_hidden_output += del_w_hidden_output
+    weights_input_hidden += learnrate * del_w_input_hidden / n_records
+    weights_hidden_output += learnrate * del_w_hidden_output / n_records
 
     # Printing out the mean square error on the training set
     if e % (epochs / 10) == 0:
