@@ -1,7 +1,6 @@
 import time
 import sys
 import numpy as np
-import pdb
 
 # Encapsulate our neural network in a class
 class SentimentNetwork:
@@ -111,14 +110,21 @@ class SentimentNetwork:
         # Keep track of correct predictions to display accuracy during training
         correct_so_far = 0
 
+    ## New for Project 5: pre-process training reviews so we can deal
+        #                     directly with the indices of non-zero inputs
         training_reviews = list()
         for review in training_reviews_raw:
             indices = set()
-            for word in review.split(' '):
-                if self.word2index[word]:
+            for word in review.split(" "):
+                if(word in self.word2index.keys()):
                     indices.add(self.word2index[word])
             training_reviews.append(list(indices))
 
+        # make sure out we have a matching number of reviews and labels
+        assert(len(training_reviews) == len(training_labels))
+
+        # Keep track of correct predictions to display accuracy during training
+        correct_so_far = 0
 
         # Remember when we started for printing time statistics
         start = time.time()
@@ -127,38 +133,50 @@ class SentimentNetwork:
         # updating weights for every item
         for i in range(len(training_reviews)):
 
-            # TODO: Get the next review and its correct label
+            # Get the next review and its correct label
             review = training_reviews[i]
-            label  = training_labels[i]
+            label = training_labels[i]
 
+            #### Implement the forward pass here ####
+            ### Forward pass ###
+
+            ## New for Project 5: Removed call to 'update_input_layer' function
+            #                     because 'layer_0' is no longer used
+
+            # Hidden layer
+            ## New for Project 5: Add in only the weights for non-zero items
             self.layer_1 *= 0
-
-            #input_to_hidden = np.zeros((1, self.weights_0_1.shape[1]))
             for index in review:
                 self.layer_1 += self.weights_0_1[index]
 
-            # (1,10) × (10,1)
-            layer_2 = np.dot(self.layer_1, self.weights_1_2)
-            output = self.sigmoid(layer_2)
+            # Output layer
+            ## New for Project 5: changed to use 'self.layer_1' instead of 'local layer_1'
+            layer_2 = self.sigmoid(self.layer_1.dot(self.weights_1_2))
 
-            # output error
-            actual = self.get_target_for_label(label)
-            layer_2_error = actual - output
-            layer_2_delta = layer_2_error * self.sigmoid_output_2_derivative(output)
+            #### Implement the backward pass here ####
+            ### Backward pass ###
 
-            # hidden error
-            layer_1_error = np.dot(layer_2_delta, self.weights_1_2.T)
-            layer_1_delta = layer_1_error
+            # Output error
+            layer_2_error = layer_2 - self.get_target_for_label(label) # Output layer error is the difference between desired target and actual output.
+            layer_2_delta = layer_2_error * self.sigmoid_output_2_derivative(layer_2)
 
+            # Backpropagated error
+            layer_1_error = layer_2_delta.dot(self.weights_1_2.T) # errors propagated to the hidden layer
+            layer_1_delta = layer_1_error # hidden layer gradients - no nonlinearity so it's the same as the error
+
+            # Update the weights
+            ## New for Project 5: changed to use 'self.layer_1' instead of local 'layer_1'
+            self.weights_1_2 -= self.layer_1.T.dot(layer_2_delta) * self.learning_rate # update hidden-to-output weights with gradient descent step
+
+            ## New for Project 5: Only update the weights that were used in the forward pass
             for index in review:
-               self.weights_0_1[index] -= layer_1_delta[0] * self.learning_rate
+                self.weights_0_1[index] -= layer_1_delta[0] * self.learning_rate # update input-to-hidden weights with gradient descent step
 
-            delta_weights_1_2 = np.dot(self.layer_1.T, layer_2_delta)
-            self.weights_1_2 -= self.learning_rate * delta_weights_1_2
-
-            if abs(layer_2_error) < 0.5:
+            # Keep track of correct predictions.
+            if(layer_2 >= 0.5 and label == 'POSITIVE'):
                 correct_so_far += 1
-
+            elif(layer_2 < 0.5 and label == 'NEGATIVE'):
+                correct_so_far += 1
 
             elapsed_time = float(time.time() - start)
             reviews_per_second = i / elapsed_time if elapsed_time > 0 else 0

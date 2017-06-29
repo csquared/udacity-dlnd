@@ -125,7 +125,6 @@ class SentimentNetwork:
 
             # forward pass through the network.
             self.update_input_layer(review)
-            pdb.set_trace()
             # (1,10)
             input_to_hidden = np.dot(self.layer_0, self.weights_0_1)
             # (1,10) ×
